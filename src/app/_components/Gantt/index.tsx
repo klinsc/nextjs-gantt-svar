@@ -1,6 +1,12 @@
 "use client";
 
-import { ContextMenu, Editor, Gantt, Willow } from "@svar-ui/react-gantt";
+import {
+  ContextMenu,
+  Editor,
+  Gantt,
+  Toolbar,
+  Willow,
+} from "@svar-ui/react-gantt";
 import { useMemo, useState } from "react";
 import { getData } from "../../data";
 import "../../GanttZoom.css";
@@ -20,6 +26,7 @@ export default function GanttPage() {
         </div>
       </div>
       <Willow>
+        <Toolbar api={api} />
         <div style={{ height: 520 }}>
           <ContextMenu api={api}>
             <Gantt
