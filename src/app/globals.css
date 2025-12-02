@@ -1,7 +1,8 @@
 @import "@svar-ui/react-gantt/all.css";
 
 :root {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   color: #0f172a;
   background-color: #f8fafc;
 }
@@ -21,7 +22,7 @@ main {
 }
 
 .gantt-wrapper {
-  max-width: 1200px;
+  max-width: 1800px;
   margin: 0 auto;
   background-color: #fff;
   border-radius: 16px;
