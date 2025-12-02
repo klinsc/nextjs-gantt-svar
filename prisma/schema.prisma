@@ -1,0 +1,107 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+enum TaskType {
+    PROJECT
+    SUMMARY
+    TASK
+    MILESTONE
+}
+
+enum LinkType {
+    FS
+    SF
+    SS
+    FF
+    E2S
+    S2S
+    S2E
+    E2E
+}
+
+enum ScaleUnit {
+    YEAR
+    QUARTER
+    MONTH
+    WEEK
+    DAY
+    HOUR
+}
+
+enum ViewRange {
+    DAY
+    WEEK
+    MONTH
+    THREE_MONTH
+    SIX_MONTH
+    YEAR
+}
+
+model Task {
+    id        Int            @id @default(autoincrement())
+    text      String
+    type      TaskType       @default(TASK)
+    startDate DateTime
+    endDate   DateTime?
+    progress  Int            @default(0)
+    duration  Int?
+    parentId  Int?
+    parent    Task?          @relation("TaskChildren", fields: [parentId], references: [id])
+    children  Task[]         @relation("TaskChildren")
+    details   String?
+    assigned  String?
+    open      Boolean?       @default(true)
+    baseStart DateTime?
+    baseEnd   DateTime?
+    resources TaskResource[]
+    linksFrom Link[]         @relation("LinkSource")
+    linksTo   Link[]         @relation("LinkTarget")
+    createdAt DateTime       @default(now())
+    updatedAt DateTime       @updatedAt
+}
+
+model Resource {
+    id    Int            @id @default(autoincrement())
+    name  String
+    role  String?
+    color String?
+    tasks TaskResource[]
+}
+
+model TaskResource {
+    taskId     Int
+    resourceId Int
+    assignedAt DateTime @default(now())
+
+    task     Task     @relation(fields: [taskId], references: [id])
+    resource Resource @relation(fields: [resourceId], references: [id])
+
+    @@id([taskId, resourceId])
+}
+
+model Link {
+    id       Int      @id @default(autoincrement())
+    type     LinkType
+    sourceId Int
+    targetId Int
+
+    source Task @relation("LinkSource", fields: [sourceId], references: [id])
+    target Task @relation("LinkTarget", fields: [targetId], references: [id])
+}
+
+model ScalePreset {
+    id       Int       @id @default(autoincrement())
+    name     String
+    unit     ScaleUnit
+    step     Int
+    format   String
+    cssClass String?
+    /// Order controls stacked scale rendering.
+    order    Int       @default(0)
+    view     ViewRange @default(MONTH)
+}
