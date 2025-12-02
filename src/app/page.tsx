@@ -1,7 +1,10 @@
 "use client";
 
-import { Gantt, Willow } from "@svar-ui/react-gantt";
+import { ContextMenu, Editor, Gantt, Willow } from "@svar-ui/react-gantt";
 import { columns, links, scales, tasks } from "./datasource";
+import "./GanttZoom.css";
+import { useMemo, useState } from "react";
+import { getData } from "./data";
 
 const timelineStart = tasks.reduce(
   (min, task) => (task.start < min ? task.start : min),
@@ -14,6 +17,8 @@ const timelineEnd = tasks.reduce(
 
 export default function HomePage() {
   const timeline = { start: timelineStart, end: timelineEnd };
+  const [api, setApi] = useState<any>();
+  const data = useMemo(() => getData(), []);
 
   return (
     <main>
@@ -35,15 +40,16 @@ export default function HomePage() {
         </div>
         <Willow>
           <div style={{ height: 520 }}>
-            <Gantt
-              tasks={tasks}
-              links={links}
-              scales={scales}
-              start={timeline.start}
-              end={timeline.end}
-              cellHeight={40}
-              zoom={false}
-            />
+            <ContextMenu api={api}>
+              <Gantt
+                init={setApi}
+                tasks={data.tasks}
+                links={data.links}
+                scales={data.scales}
+                zoom
+              />
+            </ContextMenu>
+            {api && <Editor api={api} />}
           </div>
         </Willow>
       </div>
