@@ -1,7 +1,26 @@
 "use client";
 
-import { Gantt, Willow } from "@svar-ui/react-gantt";
+import { Gantt, registerScaleUnit, Willow } from "@svar-ui/react-gantt";
 import { columns, links, scales, tasks } from "./datasource";
+import { Select } from "@svar-ui/react-core";
+import {
+  startOfMonth,
+  endOfMonth,
+  isSameMonth,
+  addMonths,
+  addDays,
+  format,
+  differenceInDays,
+} from "date-fns";
+import "./GanttMinScaleUnit.css";
+import { useMemo, useRef, useState } from "react";
+
+const options = [
+  { id: 1, label: "sprint" },
+  { id: 2, label: "month, sprint" },
+  { id: 3, label: "month, sprint, week" },
+  { id: 4, label: "month, sprint, week, day" },
+];
 
 const timelineStart = tasks.reduce(
   (min, task) => (task.start < min ? task.start : min),
@@ -14,6 +33,95 @@ const timelineEnd = tasks.reduce(
 
 export default function HomePage() {
   const timeline = { start: timelineStart, end: timelineEnd };
+
+  const getMidDate = (d: Date) => {
+    const m = d.getMonth();
+    return m === 1 ? 15 : 16;
+  };
+
+  const sprintStart = (d: Date) => {
+    const monthStart = startOfMonth(d);
+    const midDate = getMidDate(d);
+    if (d.getDate() >= midDate) monthStart.setDate(midDate);
+    return monthStart;
+  };
+
+  const sprintEnd = (d: Date) => {
+    const monthEnd = endOfMonth(d);
+    const midDate = getMidDate(d);
+    if (d.getDate() < midDate) monthEnd.setDate(midDate - 1);
+    return monthEnd;
+  };
+
+  const sprintFormat = (d: string | number | Date) => {
+    const monthStr = format(d, "MMMM");
+    const start = d.getDate();
+    const end = sprintEnd(d).getDate();
+    return `${monthStr} ${start} - ${end}`;
+  };
+
+  const allScales = useMemo(
+    () => [
+      { unit: "month", step: 1, format: "MMMM yyy" },
+      { unit: "sprint", step: 1, format: sprintFormat },
+      { unit: "week", step: 1, format: "w" },
+      { unit: "day", step: 1, format: "d" },
+    ],
+    []
+  );
+
+  const [scaleOption, setScaleOption] = useState(2);
+
+  const scales = useMemo(() => {
+    if (scaleOption == 1) return [allScales[1]];
+    if (scaleOption == 2) return allScales.slice(0, 2);
+    if (scaleOption == 3) return allScales.slice(0, 3);
+    return allScales;
+  }, [scaleOption, allScales]);
+
+  const registeredRef = useRef(false);
+  if (!registeredRef.current) {
+    registerScaleUnit("sprint", {
+      start: sprintStart,
+      end: sprintEnd,
+      isSame: (a, b) => {
+        if (!a || !b) return true;
+        const sameMonth = isSameMonth(a, b);
+        if (!sameMonth) return false;
+        const midDate = getMidDate(a);
+        return a.getDate() < midDate == b.getDate() < midDate;
+      },
+      add: (d, amount) => {
+        const date = d.getDate();
+        const start = sprintStart(d);
+        const diff = date - start.getDate();
+        let newDate = addMonths(start, Math.floor(amount / 2));
+        const midDate = getMidDate(newDate);
+        if (amount % 2) {
+          newDate = addDays(newDate, midDate);
+          newDate = sprintStart(newDate);
+        }
+        return addDays(newDate, diff);
+      },
+      diff: (endDate, startDate) => {
+        return Math.floor(differenceInDays(endDate, startDate) / 15);
+      },
+      smallerCount: {
+        day: (d) => {
+          if (!d) return 15;
+          const start = sprintStart(d).getDate();
+          const end = sprintEnd(d).getDate();
+          return end - start + 1;
+        },
+      },
+      biggerCount: {
+        year: 24,
+        quarter: 6,
+        month: 2,
+      },
+    });
+    registeredRef.current = true;
+  }
 
   return (
     <main>
@@ -33,19 +141,30 @@ export default function HomePage() {
             </p>
           </div>
         </div>
-        <Willow>
-          <div style={{ height: 520 }}>
-            <Gantt
-              tasks={tasks}
-              links={links}
-              scales={scales}
-              start={timeline.start}
-              end={timeline.end}
-              cellHeight={40}
-              zoom={false}
-            />
-          </div>
-        </Willow>
+
+        <div className="wx-megyPaP4 bar">
+          <Select
+            value={scaleOption}
+            options={options}
+            onChange={({ value }) => setScaleOption(Number(value))}
+          />
+        </div>
+
+        <div className="gantt-container">
+          <Willow>
+            <div style={{ height: 520 }}>
+              <Gantt
+                tasks={tasks}
+                links={links}
+                scales={scales}
+                start={timeline.start}
+                end={timeline.end}
+                cellHeight={40}
+                zoom={false}
+              />
+            </div>
+          </Willow>
+        </div>
       </div>
     </main>
   );
