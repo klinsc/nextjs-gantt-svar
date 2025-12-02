@@ -1,32 +1,16 @@
 import { NextResponse } from "next/server";
+import type { Link, ScalePreset } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
-type TaskRecord = Awaited<ReturnType<typeof prisma.task.findMany>>[number];
-type LinkRecord = Awaited<ReturnType<typeof prisma.link.findMany>>[number];
-type ScaleRecord = Awaited<
-  ReturnType<typeof prisma.scalePreset.findMany>
->[number];
+import {
+  TaskInputError,
+  type TaskPayload,
+  buildCreateData,
+  serializeTask,
+} from "./taskUtils";
 
-function serializeTask(task: TaskRecord) {
-  return {
-    id: task.id,
-    text: task.text,
-    type: task.type.toLowerCase(),
-    start: task.startDate.toISOString(),
-    end: task.endDate ? task.endDate.toISOString() : null,
-    progress: task.progress,
-    duration: task.duration ?? null,
-    parent: task.parentId ?? 0,
-    details: task.details ?? null,
-    assigned: task.assigned ?? null,
-    open: task.open ?? true,
-    base_start: task.baseStart ? task.baseStart.toISOString() : null,
-    base_end: task.baseEnd ? task.baseEnd.toISOString() : null,
-  };
-}
-
-function serializeLink(link: LinkRecord) {
+function serializeLink(link: Link) {
   return {
     id: link.id,
     type: link.type.toLowerCase(),
@@ -35,7 +19,7 @@ function serializeLink(link: LinkRecord) {
   };
 }
 
-function serializeScale(scale: ScaleRecord) {
+function serializeScale(scale: ScalePreset) {
   return {
     id: scale.id,
     unit: scale.unit.toLowerCase(),
@@ -55,8 +39,33 @@ export async function GET() {
   ]);
 
   return NextResponse.json({
-    tasks: tasks.map((task: TaskRecord) => serializeTask(task)),
-    links: links.map((link: LinkRecord) => serializeLink(link)),
-    scales: scales.map((scale: ScaleRecord) => serializeScale(scale)),
+    tasks: tasks.map((task) => serializeTask(task)),
+    links: links.map((link) => serializeLink(link)),
+    scales: scales.map((scale) => serializeScale(scale)),
   });
+}
+
+export async function POST(request: Request) {
+  try {
+    const payload = (await request.json()) as TaskPayload;
+    const data = buildCreateData(payload);
+    const created = await prisma.task.create({ data });
+
+    return NextResponse.json({ task: serializeTask(created) }, { status: 201 });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+function handleError(error: unknown) {
+  if (error instanceof TaskInputError) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  if (error instanceof Error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json(
+    { error: "Unexpected server error" },
+    { status: 500 }
+  );
 }
