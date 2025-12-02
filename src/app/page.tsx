@@ -54,9 +54,10 @@ export default function HomePage() {
   };
 
   const sprintFormat = (d: string | number | Date) => {
-    const monthStr = format(d, "MMMM");
-    const start = d.getDate();
-    const end = sprintEnd(d).getDate();
+    const date = new Date(d);
+    const monthStr = format(date, "MMMM");
+    const start = date.getDate();
+    const end = sprintEnd(date).getDate();
     return `${monthStr} ${start} - ${end}`;
   };
 
